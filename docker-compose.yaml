@@ -1,0 +1,61 @@
+version: '3'
+
+# Common video segment duration (may not be accurate unless the key-frames are force at a given time).
+x-record-duration: &x-record-duration
+  900 # seconds
+
+services:
+
+  # Define here as many cameras as you want:
+  # Encode with CUDA:
+  cam_0:
+    build: ./docker/ffmpeg_rtsp_encode_cuda/
+    network_mode: host
+    environment:
+      URL: rtsp://admin:admin@192.168.0.25:1945
+      PREFIX: cam_0
+      DURATION: *x-record-duration
+      LOGLEVEL: warning
+      # EXTRA_PARAMS_IN: 
+      # EXTRA_PARAMS_OUT: 
+    volumes:
+      - records_volume:/var/recordings:rw
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+ 
+  # Encode without CUDA
+  # cam_0:
+  #   build: ./docker/ffmpeg_rtsp_encode/
+  #   network_mode: host
+  #   environment:
+  #     URL: rtsp://admin:admin@192.168.0.25:1945
+  #     PREFIX: cam_0
+  #     DURATION: *x-record-duration
+  #     LOGLEVEL: warning
+  #     # EXTRA_PARAMS_IN: 
+  #     # EXTRA_PARAMS_OUT: 
+  #   volumes:
+  #     - records_volume:/var/recordings:rw
+  #   restart: always
+
+  # # Service to delete old videos
+  # storage_manager:
+  #   build: ./StorageManager
+  #   restart: always
+  #   volumes:
+  #     - records_volume:/var/recordings:rw
+  #     - ./StorageManager:/app/:r
+
+volumes:
+  records_volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./recordings
